@@ -40,6 +40,12 @@ class Car:
         self.minSpeed = 0
         self.reactionTime = self.valuesDict["Reaction Time"]
 
+    def setSpeed(self, speed):
+        self.speed = speed
+
+    def getSpeed(self):
+        return self.speed
+
     def update(self):
 
         self.greenValue = round(self.speed / (self.maxSpeed - self.minSpeed) * 255)
@@ -68,21 +74,13 @@ class Car:
 
     def move(self):
 
-        # self.isBraking = False
-        # deltaAngle = (self.carAngleList[self.nextCarId] - self.angle) % 360
-        # minAngle = radToDeg((self.radius * 3) / self.roadRadius)
-        # if 0 <= deltaAngle <= minAngle:
-        #     self.isBraking = True
-        #
-        # if not self.isBraking and not self.stopped:
-        #     self.speed = min(self.maxSpeed, self.speed + self.acceleration)
-        # else:
-        #     self.speed = max(self.minSpeed, self.speed - self.acceleration)
-
         deltaAngle = (self.carAngleList[self.nextCarId] - self.angle) % 360
         distToNextCar = deltaAngle * self.roadRadius
 
-        if distToNextCar <= self.minDistance:
+        if self.stopped:
+            self.currentMaxSpeed = 0
+
+        elif distToNextCar <= self.minDistance:
             self.currentMaxSpeed = 0
         elif distToNextCar > self.reactionTime * self.maxSpeed:
             self.currentMaxSpeed = self.maxSpeed

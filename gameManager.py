@@ -39,18 +39,18 @@ pygame.draw.circle(
 )
 
 valuesDict = {
-    "Max Speed": 10,
-    "Acceleration": 3,
-    "Min Distance": 20,
+    "Max Speed": 100,
+    "Acceleration": 20,
+    "Min Distance": 300,
     "nb Car": 10,
-    "Reaction Time": 5,
+    "Reaction Time": 20,
 }
 extremaValuesDict = {
     "Max Speed": (0, 200),
-    "Acceleration": (0, 10),
-    "Min Distance": (1, 100),
-    "nb Car": (1, 100),
-    "Reaction Time": (1, 10),  # in frames
+    "Acceleration": (0, 100),
+    "Min Distance": (100, 1000),
+    "nb Car": (1, 200),
+    "Reaction Time": (1, 100),  # in frames
 }
 
 sliderList: list[Slider] = []
@@ -93,6 +93,8 @@ while isRunning:
             for slider in sliderList:
                 slider.checkScroll(mousePos, mouseScroll)
 
+                nbCar = round(valuesDict["nb Car"])
+
             while len(carList) > round(valuesDict["nb Car"]):
                 carList.pop()
                 carAngleList.pop()
@@ -101,6 +103,7 @@ while isRunning:
                 carList.append(
                     Car(valuesDict, roadRadius, len(carList), carAngleList, carList)
                 )
+                carList[-1].setSpeed(carList[0].getSpeed())
 
             for car in carList:
                 car.updateValues()
