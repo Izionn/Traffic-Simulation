@@ -64,6 +64,8 @@ for i in range(nbCar):
     carList.append((Car(valuesDict, roadRadius, i, carAngleList, carList)))
 
 isRunning = True
+isDragging = False
+slidingId = 0
 
 while isRunning:
     for event in pygame.event.get():
@@ -109,10 +111,27 @@ while isRunning:
                 car.updateValues()
                 car.updatesIds()
 
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            mousePos = pygame.mouse.get_pos()
+            for i, slider in enumerate(sliderList):
+                if slider.checkClick(mousePos):
+                    pygame.mouse.get_rel()
+                    isDragging = True
+                    slidingId = i
+
+        if event.type == pygame.MOUSEBUTTONUP:
+            if isDragging:
+                isDragging = False
+                sliderList[slidingId].dragged = False
+
         if event.type == pygame.KEYUP:
             pass
 
     # Game Loop
+
+    if isDragging:
+        deltaMouse = pygame.mouse.get_rel()
+        sliderList[slidingId]
 
     display.fill((0, 0, 0))
     display.blit(backgroundImage, (0, 0))

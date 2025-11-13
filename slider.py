@@ -42,7 +42,34 @@ class Slider:
             str(self.minValue), True, self.fontColor
         )
 
+        # slider constants
+        self.barMargin = 20
+        self.barLength = self.width - 2 * self.barMargin
+        self.barPosY = round(3 * self.height / 4)
+        self.barHeight = 10
+        self.centerX = self.width // 2
+        self.sliderRadius = 10
+
+        # click and drag slider logic
+        self.sliderPosX = 0
+        self.sliderPosY = round(round(3 * self.height / 4) + 10 / 2)
+        self.dragged = False
+
         self.updateImage()
+
+    def checkClick(self, mousePos):
+
+        deltaX = self.posX + self.sliderPosX - mousePos[0]
+        deltaY = self.posY + self.sliderPosY - mousePos[1]
+
+        if deltaX**2 + deltaY**2 < self.sliderRadius**2:
+            self.dragged = True
+            return True
+
+        return False
+
+    def slide(self, deltaMouse):
+        deltaMouseX = deltaMouse[0]
 
     def checkScroll(self, mousePos, mouseScroll):
         mouseX, mouseY = mousePos
@@ -61,41 +88,38 @@ class Slider:
             self.updateImage()
 
     def updateImage(self):
-        barMargin = 20
-        barLength = self.width - 2 * barMargin
-        barPosY = round(3 * self.height / 4)
-        barHeight = 10  # used as radius for the slider
-        centerX = self.width // 2
 
-        sliderPosX = round(
-            barMargin
-            + barHeight / 2
-            + (barLength - barHeight)
+        self.sliderPosX = round(
+            self.barMargin
+            + self.barHeight / 2
+            + (self.barLength - self.barHeight)
             * (self.value - self.minValue)
             / (self.maxValue - self.minValue)
         )
 
         bgRect = pygame.Rect(0, 0, self.width, self.height - 5)
-        barRect = pygame.Rect(barMargin, barPosY, barLength, barHeight)
+        barRect = pygame.Rect(
+            self.barMargin, self.barPosY, self.barLength, self.barHeight
+        )
 
         pygame.draw.rect(self.image, self.bgColor, bgRect, border_radius=20)
         pygame.draw.rect(self.image, self.barColor, barRect, border_radius=20)
         pygame.draw.circle(
             self.image,
             self.sliderColor,
-            (sliderPosX, round(barPosY + barHeight / 2)),
-            barHeight,
+            (self.sliderPosX, round(self.barPosY + self.barHeight / 2)),
+            self.barHeight,
         )
 
-        namePos = (centerX - self.nameSurf.get_size()[0] // 2, 5)
+        namePos = (self.centerX - self.nameSurf.get_size()[0] // 2, 5)
         valuesPosY = round(
-            barPosY - barHeight * 0.75 - self.maxValueFontSurf.get_size()[1]
+            self.barPosY - self.barHeight * 0.75 - self.maxValueFontSurf.get_size()[1]
         )
         maxValuePos = (
-            self.width - self.maxValueFontSurf.get_size()[0] - barMargin,
+            self.width - self.maxValueFontSurf.get_size()[0] - self.barMargin,
             valuesPosY,
         )
-        minValuePos = (barMargin, valuesPosY)
+        minValuePos = (self.barMargin, valuesPosY)
 
         currentValueText = self.font.render(
             str(round(self.value, 1)), True, (255, 255, 255)
