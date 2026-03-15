@@ -29,12 +29,8 @@ class Slider:
 
         self.fontColor = pygame.Color(150, 150, 150)
         self.font = pygame.font.Font(r"./FiraCodeNerdFontMono-Light.ttf", 24)
+        self.nameFont = pygame.font.Font(r"./FiraCodeNerdFontMono-Light.ttf", 24)
 
-        self.nameSurf = self.font.render(
-            self.key,
-            True,
-            (255, 255, 255),
-        )
         self.maxValueFontSurf = self.font.render(
             str(self.maxValue), True, self.fontColor
         )
@@ -55,6 +51,9 @@ class Slider:
         self.sliderPosY = round(round(3 * self.height / 4) + 10 / 2)
         self.dragged = False
 
+        # keyboard control logic
+        self.selected = False
+
         self.updateImage()
 
     def checkClick(self, mousePos):
@@ -70,6 +69,18 @@ class Slider:
 
     def slide(self, deltaMouse):
         deltaMouseX = deltaMouse[0]
+
+    def addToValue(self, deltaValue):
+        self.value += deltaValue
+
+        if self.value > self.maxValue:
+            self.value = self.maxValue
+        if self.value < self.minValue:
+            self.value = self.minValue
+
+        self.valuesDict[self.key] = self.value
+
+        self.updateImage()
 
     def checkScroll(self, mousePos, mouseScroll):
         mouseX, mouseY = mousePos
@@ -102,6 +113,7 @@ class Slider:
             self.barMargin, self.barPosY, self.barLength, self.barHeight
         )
 
+        # drawing slider
         pygame.draw.rect(self.image, self.bgColor, bgRect, border_radius=20)
         pygame.draw.rect(self.image, self.barColor, barRect, border_radius=20)
         pygame.draw.circle(
@@ -111,24 +123,38 @@ class Slider:
             self.barHeight,
         )
 
-        namePos = (self.centerX - self.nameSurf.get_size()[0] // 2, 5)
+        # drawing name
+        self.nameFont.underline = self.selected
+
+        nameSurf = self.nameFont.render(
+            self.key,
+            True,
+            (255, 255, 255),
+        )
+        namePos = (self.centerX - nameSurf.get_size()[0] // 2, 5)
+        self.image.blit(nameSurf, namePos)
+
+        # drawing values
         valuesPosY = round(
             self.barPosY - self.barHeight * 0.75 - self.maxValueFontSurf.get_size()[1]
         )
+
+        # drawing maxValue
         maxValuePos = (
             self.width - self.maxValueFontSurf.get_size()[0] - self.barMargin,
             valuesPosY,
         )
-        minValuePos = (self.barMargin, valuesPosY)
+        self.image.blit(self.maxValueFontSurf, maxValuePos)
 
+        # drawing min value
+        minValuePos = (self.barMargin, valuesPosY)
+        self.image.blit(self.minValueFontSurf, minValuePos)
+
+        # drawing current value
         currentValueText = self.font.render(
-            str(round(self.value, 1)), True, (255, 255, 255)
+            str(round(self.value, 1)), True, self.fontColor
         )
         currentValuePos = (self.width - currentValueText.get_size()[0]) // 2
-
-        self.image.blit(self.nameSurf, namePos)
-        self.image.blit(self.maxValueFontSurf, maxValuePos)
-        self.image.blit(self.minValueFontSurf, minValuePos)
         self.image.blit(currentValueText, (currentValuePos, valuesPosY))
 
     def draw(self):
@@ -136,12 +162,3 @@ class Slider:
             self.image,
             (self.posX, self.posY),
         )
-
-
-myDict = {
-    "key1": 1,
-    "key2": 2,
-    "key3": 3,
-    "key4": 4,
-    "key5": 5,
-}
