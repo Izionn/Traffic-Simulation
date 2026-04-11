@@ -38,4 +38,3 @@ class PayneW:
 
     def update(self):
         self.updateCarsAround0()
-        print(self.getAverageSpeedAt0())

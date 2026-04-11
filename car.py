@@ -40,25 +40,22 @@ class Car:
         self.minSpeed = 0
         self.reactionTime = self.valuesDict["Reaction Time"]
 
-    def setSpeed(self, speed):
-        self.speed = speed
+    def initState(self):
+        # state init
+        self.nextCar = self.carList[self.nextCarId]
+        self.state = np.array(
+            [
+                self.speed,
+                self.nextCar.speed,
+                abs(self.nextCar.angle - self.angle) * self.roadRadius,
+            ]
+        )
 
-    def getSpeed(self):
-        return self.speed
+        self.action = 0
 
     def update(self):
 
-        self.greenValue = round(self.speed / (self.maxSpeed - self.minSpeed) * 255)
-        self.redValue = round(
-            (self.maxSpeed - self.speed) / (self.maxSpeed - self.minSpeed) * 255
-        )
-        self.redValue = max([0, self.redValue])
-        self.redValue = min([255, self.redValue])
-
-        self.greenValue = max([0, self.greenValue])
-        self.greenValue = min([255, self.greenValue])
-
-        self.color = pygame.Color(self.redValue, self.greenValue, 0)
+        self.updateColor()
         self.move()
 
     def updatesIds(self):
@@ -87,8 +84,18 @@ class Car:
         else:
             self.currentMaxSpeed = distToNextCar / self.reactionTime
 
-        if self.speed < self.currentMaxSpeed:
+        # execute Qlearning action
+        if self.action == 0:  # gaz
             self.speed = min(self.speed + self.acceleration, self.currentMaxSpeed)
+
+        if self.action == 1:  # cruise
+            pass
+        if self.action == 2:  # break
+            self.speed = max(self.speed - self.acceleration, 0)
+
+        # crop speed in [0, self.currentMaxSpeed]
+        if self.speed < 0:
+            self.speed = min(self.speed + self.acceleration, 0)
         if self.speed > self.currentMaxSpeed:
             self.speed = max(self.speed - self.acceleration, self.currentMaxSpeed)
 
@@ -102,6 +109,19 @@ class Car:
 
         self.posX = self.roadRadius * np.cos(degToRad(self.angle)) + self.roadCenter[0]
         self.posY = self.roadRadius * np.sin(degToRad(self.angle)) + self.roadCenter[1]
+
+    def updateColor(self):
+        self.greenValue = round(self.speed / (self.maxSpeed - self.minSpeed) * 255)
+        self.redValue = round(
+            (self.maxSpeed - self.speed) / (self.maxSpeed - self.minSpeed) * 255
+        )
+        self.redValue = max([0, self.redValue])
+        self.redValue = min([255, self.redValue])
+
+        self.greenValue = max([0, self.greenValue])
+        self.greenValue = min([255, self.greenValue])
+
+        self.color = pygame.Color(self.redValue, self.greenValue, 0)
 
     def draw(self):
         pygame.draw.circle(

@@ -1,7 +1,12 @@
 import pygame
 
 from car import Car
+from myLibrary import showDebugValues
 from slider import Slider
+
+# from payneW import PayneW
+# from wavefront import Wavefront
+from QLearning import QTable
 
 
 pygame.init()
@@ -41,14 +46,15 @@ pygame.draw.circle(
 valuesDict = {
     "Max Speed": 100,
     "Acceleration": 20,
-    "Min Distance": 300,
+    "Min Distance": 1000,
     "nb Car": 10,
     "Reaction Time": 20,
 }
+
 extremaValuesDict = {
     "Max Speed": (0, 200),
     "Acceleration": (0, 100),
-    "Min Distance": (100, 1000),
+    "Min Distance": (500, 5000),
     "nb Car": (1, 200),
     "Reaction Time": (1, 100),  # in frames
 }
@@ -58,14 +64,42 @@ for i in range(len(valuesDict.keys())):
     sliderList.append(Slider(valuesDict, extremaValuesDict, i))
 
 carList: list[Car] = []
-nbCar = valuesDict["nb Car"]
-carAngleList = [i * 360 / nbCar for i in range(nbCar)]
-for i in range(nbCar):
+
+carAngleList = [i * 360 / valuesDict["nb Car"] for i in range(valuesDict["nb Car"])]
+for i in range(valuesDict["nb Car"]):
     carList.append((Car(valuesDict, roadRadius, i, carAngleList, carList)))
+
+for car in carList:
+    car.updateValues()
+    car.initState()
+
 
 isRunning = True
 isDragging = False
+
+nbSlider = len(valuesDict)
 slidingId = 0
+
+# keyboard slider control
+selectedSliderId = 0
+for i in range(nbSlider):
+    sliderList[i].selected = i == selectedSliderId
+
+
+# debug logic
+debugDict = {}
+
+# PW logic
+
+# payneW = PayneW(carList, valuesDict)
+
+# wavefront logic
+
+# wavefront = Wavefront(carList, valuesDict, roadRadius)
+
+# qTable logic
+qTable = QTable(debugDict, carList, valuesDict, roadRadius)
+
 
 while isRunning:
     for event in pygame.event.get():
@@ -81,35 +115,46 @@ while isRunning:
             if event.key == pygame.K_q:
                 isRunning = False
                 sys.exit()
+
             if event.key == pygame.K_r:
-                carList = []
-                carAngleList = [i * 360 / nbCar for i in range(nbCar)]
-                for i in range(nbCar):
+                carList.clear()
+                carAngleList = [
+                    i * 360 / valuesDict["nb Car"] for i in range(valuesDict["nb Car"])
+                ]
+                for i in range(valuesDict["nb Car"]):
                     carList.append(
                         (Car(valuesDict, roadRadius, i, carAngleList, carList))
                     )
+
+            if event.key == pygame.K_j:
+                selectedSliderId += 1
+            if event.key == pygame.K_k:
+                selectedSliderId -= 1
+
+            selectedSliderId %= nbSlider
+            for i in range(nbSlider):
+                sliderList[i].selected = i == selectedSliderId
+
+            mods = event.mod
+            multiplier = 1
+            if mods == 1:
+                multiplier = 5
+            if mods == 65:
+                multiplier = 25
+            if mods == 64:
+                multiplier = 100
+
+            if event.key == pygame.K_h:
+                sliderList[selectedSliderId].addToValue(-1 * multiplier)
+
+            if event.key == pygame.K_l:
+                sliderList[selectedSliderId].addToValue(1 * multiplier)
 
         if event.type == pygame.MOUSEWHEEL:
             mousePos = pygame.mouse.get_pos()
             mouseScroll = event.y
             for slider in sliderList:
                 slider.checkScroll(mousePos, mouseScroll)
-
-                nbCar = round(valuesDict["nb Car"])
-
-            while len(carList) > round(valuesDict["nb Car"]):
-                carList.pop()
-                carAngleList.pop()
-            while len(carList) < round(valuesDict["nb Car"]):
-                carAngleList.append(carAngleList[0] - 5)
-                carList.append(
-                    Car(valuesDict, roadRadius, len(carList), carAngleList, carList)
-                )
-                carList[-1].setSpeed(carList[0].getSpeed())
-
-            for car in carList:
-                car.updateValues()
-                car.updatesIds()
 
         if event.type == pygame.MOUSEBUTTONDOWN:
             mousePos = pygame.mouse.get_pos()
@@ -124,24 +169,41 @@ while isRunning:
                 isDragging = False
                 sliderList[slidingId].dragged = False
 
-        if event.type == pygame.KEYUP:
-            pass
+    # update values
+    while len(carList) > round(valuesDict["nb Car"]):
+        carList.pop()
+        carAngleList.pop()
+    while len(carList) < round(valuesDict["nb Car"]):
+        carAngleList.append(carAngleList[0] - 5)
+        carList.append(Car(valuesDict, roadRadius, len(carList), carAngleList, carList))
+        carList[-1].speed = carList[0].speed
+
+    for car in carList:
+        car.updateValues()
+        car.updatesIds()
+        car.initState()
 
     # Game Loop
 
-    if isDragging:
-        deltaMouse = pygame.mouse.get_rel()
-        sliderList[slidingId]
-
     display.fill((0, 0, 0))
     display.blit(backgroundImage, (0, 0))
+
+    qTable.setActions()
 
     for car in carList:
         car.update()
         car.draw()
 
+    qTable.learn()
+
     for slider in sliderList:
+        slider.updateImage()
         slider.draw()
+
+    # payneW.update()
+    # wavefront.update()
+
+    showDebugValues(display, debugDict)
 
     pygame.display.update()
     fpsClock.tick(FPS)

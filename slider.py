@@ -67,9 +67,6 @@ class Slider:
 
         return False
 
-    def slide(self, deltaMouse):
-        deltaMouseX = deltaMouse[0]
-
     def addToValue(self, deltaValue):
         self.value += deltaValue
 
