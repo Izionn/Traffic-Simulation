@@ -1,7 +1,8 @@
 import pygame
+from math import atan2, cos, sin
 
 from car import Car
-from myLibrary import showDebugValues
+from myLibrary import *
 from slider import Slider
 
 # from payneW import PayneW
@@ -45,9 +46,9 @@ pygame.draw.circle(
 
 valuesDict = {
     "Max Speed": 100,
-    "Acceleration": 20,
-    "Min Distance": 1000,
-    "nb Car": 10,
+    "Acceleration": 5,
+    "Min Distance": 2000,
+    "nb Car": 40,
     "Reaction Time": 20,
 }
 
@@ -88,6 +89,7 @@ for i in range(nbSlider):
 
 # debug logic
 debugDict = {}
+debugDict["thinking"] = True
 
 # PW logic
 
@@ -125,6 +127,8 @@ while isRunning:
                     carList.append(
                         (Car(valuesDict, roadRadius, i, carAngleList, carList))
                     )
+            if event.key == pygame.K_t:
+                debugDict["thinking"] = not debugDict["thinking"]
 
             if event.key == pygame.K_j:
                 selectedSliderId += 1
@@ -173,10 +177,22 @@ while isRunning:
     while len(carList) > round(valuesDict["nb Car"]):
         carList.pop()
         carAngleList.pop()
+
     while len(carList) < round(valuesDict["nb Car"]):
-        carAngleList.append(carAngleList[0] - 5)
+        firstCarAngle = degToRad(carAngleList[0])
+        secondCarAngle = degToRad(carAngleList[-1])
+        newAngle = radToDeg(
+            atan2(
+                (sin(firstCarAngle) + sin(secondCarAngle)) / 2,
+                (cos(firstCarAngle) + cos(secondCarAngle)) / 2,
+            )
+        )
+        carAngleList.append(newAngle)
+
+        newSpeed = (carList[-1].speed + carList[0].speed) / 2
+
         carList.append(Car(valuesDict, roadRadius, len(carList), carAngleList, carList))
-        carList[-1].speed = carList[0].speed
+        carList[-1].speed = newSpeed
 
     for car in carList:
         car.updateValues()

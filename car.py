@@ -74,22 +74,26 @@ class Car:
         deltaAngle = (self.carAngleList[self.nextCarId] - self.angle) % 360
         distToNextCar = deltaAngle * self.roadRadius
 
+        # definition of currentMaxSpeed
         if self.stopped:
             self.currentMaxSpeed = 0
-
         elif distToNextCar <= self.minDistance:
             self.currentMaxSpeed = 0
-        elif distToNextCar > self.reactionTime * self.maxSpeed:
-            self.currentMaxSpeed = self.maxSpeed
+        # elif distToNextCar > self.reactionTime * self.maxSpeed:
+        #     self.currentMaxSpeed = self.maxSpeed
+        # else:
+        #     self.currentMaxSpeed = distToNextCar / self.reactionTime
         else:
-            self.currentMaxSpeed = distToNextCar / self.reactionTime
+            self.currentMaxSpeed = self.maxSpeed
 
         # execute Qlearning action
         if self.action == 0:  # gaz
-            self.speed = min(self.speed + self.acceleration, self.currentMaxSpeed)
+            if self.speed < self.currentMaxSpeed:
+                self.speed = min(self.speed + self.acceleration, self.currentMaxSpeed)
 
         if self.action == 1:  # cruise
             pass
+
         if self.action == 2:  # break
             self.speed = max(self.speed - self.acceleration, 0)
 
@@ -98,9 +102,6 @@ class Car:
             self.speed = min(self.speed + self.acceleration, 0)
         if self.speed > self.currentMaxSpeed:
             self.speed = max(self.speed - self.acceleration, self.currentMaxSpeed)
-
-        if self.stopped:
-            self.speed = max(self.speed - self.acceleration, 0)
 
         radialSpeed = self.speed / self.roadRadius
 
@@ -111,6 +112,10 @@ class Car:
         self.posY = self.roadRadius * np.sin(degToRad(self.angle)) + self.roadCenter[1]
 
     def updateColor(self):
+        if self.speed == self.maxSpeed:
+            self.color = pygame.Color("#9999e6")
+            return
+
         self.greenValue = round(self.speed / (self.maxSpeed - self.minSpeed) * 255)
         self.redValue = round(
             (self.maxSpeed - self.speed) / (self.maxSpeed - self.minSpeed) * 255
