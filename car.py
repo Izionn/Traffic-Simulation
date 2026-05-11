@@ -8,6 +8,7 @@ pygame.init()
 class Car:
     def __init__(self, valuesDict, roadRadius, carId, carAngleList, carList) -> None:
         self.display = pygame.display.get_surface()
+        assert type(self.display) == pygame.Surface
         self.displaySize = self.display.get_size()
         self.roadCenter = self.displaySize[1] // 2, self.displaySize[1] // 2
 
@@ -38,15 +39,23 @@ class Car:
         self.acceleration = self.valuesDict["Acceleration"]
         self.maxSpeed = self.valuesDict["Max Speed"]
         self.minSpeed = 0
-        self.reactionTime = self.valuesDict["Reaction Time"]
+
+        # perturbation logic
+        self.perturbing = False
+        self.perturbInterval = self.valuesDict["Perturb Interval"]
+        self.perturbDuration = self.valuesDict["Perturb Duration"]
+        self.perturbCooldown = self.perturbInterval
+        self.perturbTimeLeft = self.perturbDuration
 
     def initState(self):
-        # state init
+
+        self.computeAvgSpeed()
         self.nextCar = self.carList[self.nextCarId]
         self.state = np.array(
             [
                 self.speed,
                 self.nextCar.speed,
+                self.avgSpeed,
                 abs(self.nextCar.angle - self.angle) * self.roadRadius,
             ]
         )
@@ -54,6 +63,9 @@ class Car:
         self.action = 0
 
     def update(self):
+
+        if self.perturbing:
+            self.perturbTrafic()
 
         self.updateColor()
         self.move()
@@ -66,8 +78,26 @@ class Car:
         self.minDistance = self.valuesDict["Min Distance"]
         self.acceleration = self.valuesDict["Acceleration"]
         self.maxSpeed = self.valuesDict["Max Speed"]
-        self.reactionTime = self.valuesDict["Reaction Time"]
         self.nbCars = len(self.carAngleList)
+
+        self.perturbInterval = self.valuesDict["Perturb Interval"]
+        self.perturbDuration = self.valuesDict["Perturb Duration"]
+
+    def perturbTrafic(self):
+        if self.stopped:
+            self.perturbTimeLeft -= 1
+            if self.perturbTimeLeft == 0:
+                self.stopped = False
+                self.perturbTimeLeft = self.perturbDuration
+        else:
+            self.perturbCooldown -= 1
+            if self.perturbCooldown == 0:
+                self.stopped = True
+                self.perturbCooldown = self.perturbInterval
+
+        print(
+            f"self.stopped : {self.stopped}, self.perturbTimeLeft : {self.perturbTimeLeft}, self.perturbCooldown : {self.perturbCooldown}"
+        )
 
     def move(self):
 
@@ -129,9 +159,13 @@ class Car:
         self.color = pygame.Color(self.redValue, self.greenValue, 0)
 
     def draw(self):
+        assert type(self.display) == pygame.Surface
         pygame.draw.circle(
             self.display,
             self.color,
             (self.posX, self.posY),
             self.radius,
         )
+
+    def computeAvgSpeed(self):
+        self.avgSpeed = sum([car.speed for car in self.carList]) / len(self.carList)

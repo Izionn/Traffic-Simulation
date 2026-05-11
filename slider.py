@@ -6,6 +6,7 @@ pygame.init()
 class Slider:
     def __init__(self, valuesDict, extremaValuesDict, id) -> None:
         self.display = pygame.display.get_surface()
+        assert type(self.display) == pygame.Surface
         self.displaySize = self.display.get_size()
 
         self.valuesDict = valuesDict
@@ -155,6 +156,7 @@ class Slider:
         self.image.blit(currentValueText, (currentValuePos, valuesPosY))
 
     def draw(self):
+        assert type(self.display) == pygame.Surface
         self.display.blit(
             self.image,
             (self.posX, self.posY),

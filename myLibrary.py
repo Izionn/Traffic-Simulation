@@ -37,7 +37,48 @@ def showDebugValues(display, debugDict):
 
     fontSurf = pygame.Surface((maxRowWidth, fontSize * nbRows))
     fontSurf.fill((0, 0, 0))
+
     for i in range(nbRows):
         fontSurf.blit(rowsList[i], (0, i * fontSize))
 
     display.blit(fontSurf, (0, 0))
+
+
+def setGetAvgSpeed(carList, debugDict):
+    newAvgSpeed = round(sum([car.speed for car in carList]) / len(carList))
+    for car in carList:
+        car.avgSpeed = newAvgSpeed
+
+    debugDict["avgSpeed"] = newAvgSpeed
+    return newAvgSpeed
+
+
+def computeJamitonsInt(carList: list):
+    intValue = 0
+    maxSpeed = carList[0].maxSpeed
+    nbCar = len(carList)
+    for carId in range(nbCar):
+        nextCarId = (carId + 1) % nbCar
+
+        carAngle = carList[carId].angle
+        nextCarAngle = carList[nextCarId].angle
+
+        if nextCarAngle - carAngle > 0:
+            deltaAngle = nextCarAngle - carAngle
+        else:
+            deltaAngle = 360 - carAngle + nextCarAngle
+
+        carSpeed = carList[carId].speed
+        nextCarSpeed = carList[nextCarId].speed
+
+        deltaSpeed = nextCarSpeed - carSpeed
+
+        currentArea = deltaAngle * (maxSpeed - carSpeed) - deltaAngle * deltaSpeed / 2
+        intValue += currentArea
+
+    normalizedIntValue = intValue / (maxSpeed * 360)
+
+    return normalizedIntValue
+
+
+validChar = "abcdefghijklmnopqrstuvwxyz 1234567890."

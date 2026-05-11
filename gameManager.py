@@ -1,17 +1,18 @@
 import pygame
+import sys
 from math import atan2, cos, sin
 
 from car import Car
+import cmdLine
 from myLibrary import *
 from slider import Slider
 
 # from payneW import PayneW
 # from wavefront import Wavefront
 from QLearning import QTable
-
+from cmdLine import CmdLine
 
 pygame.init()
-import sys
 
 
 # pygame window definition
@@ -49,7 +50,8 @@ valuesDict = {
     "Acceleration": 5,
     "Min Distance": 2000,
     "nb Car": 40,
-    "Reaction Time": 20,
+    "Perturb Interval": 100,
+    "Perturb Duration": 10,
 }
 
 extremaValuesDict = {
@@ -57,7 +59,8 @@ extremaValuesDict = {
     "Acceleration": (0, 100),
     "Min Distance": (500, 5000),
     "nb Car": (1, 200),
-    "Reaction Time": (1, 100),  # in frames
+    "Perturb Interval": (1, 500),
+    "Perturb Duration": (1, 100),
 }
 
 sliderList: list[Slider] = []
@@ -75,9 +78,6 @@ for car in carList:
     car.initState()
 
 
-isRunning = True
-isDragging = False
-
 nbSlider = len(valuesDict)
 slidingId = 0
 
@@ -89,7 +89,10 @@ for i in range(nbSlider):
 
 # debug logic
 debugDict = {}
+debugDict["isRunning"] = True
 debugDict["thinking"] = True
+debugDict["perturbing"] = False
+debugDict["nbIteration"] = 0
 
 # PW logic
 
@@ -102,21 +105,20 @@ debugDict["thinking"] = True
 # qTable logic
 qTable = QTable(debugDict, carList, valuesDict, roadRadius)
 
+# plotting logic
+avgSpeedList = []
 
-while isRunning:
+# cmdLine logic
+cmdLine = CmdLine(qTable, avgSpeedList)
+
+while debugDict["isRunning"]:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            isRunning = False
+            debugDict["isRunning"] = False
             # sys.exit()
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
-                isRunning = False
-                sys.exit()
+        if event.type == pygame.KEYDOWN and not cmdLine.opened:
             if event.key == pygame.K_SPACE:
                 carList[0].stopped = not carList[0].stopped
-            if event.key == pygame.K_q:
-                isRunning = False
-                sys.exit()
 
             if event.key == pygame.K_r:
                 carList.clear()
@@ -129,6 +131,9 @@ while isRunning:
                     )
             if event.key == pygame.K_t:
                 debugDict["thinking"] = not debugDict["thinking"]
+
+            if event.key == pygame.K_p:
+                debugDict["perturbing"] = not debugDict["perturbing"]
 
             if event.key == pygame.K_j:
                 selectedSliderId += 1
@@ -154,24 +159,20 @@ while isRunning:
             if event.key == pygame.K_l:
                 sliderList[selectedSliderId].addToValue(1 * multiplier)
 
-        if event.type == pygame.MOUSEWHEEL:
-            mousePos = pygame.mouse.get_pos()
-            mouseScroll = event.y
-            for slider in sliderList:
-                slider.checkScroll(mousePos, mouseScroll)
+            if event.key == pygame.K_COLON:
+                cmdLine.open()
 
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            mousePos = pygame.mouse.get_pos()
-            for i, slider in enumerate(sliderList):
-                if slider.checkClick(mousePos):
-                    pygame.mouse.get_rel()
-                    isDragging = True
-                    slidingId = i
-
-        if event.type == pygame.MOUSEBUTTONUP:
-            if isDragging:
-                isDragging = False
-                sliderList[slidingId].dragged = False
+        if event.type == pygame.KEYDOWN and cmdLine.opened:
+            if event.key == pygame.K_ESCAPE:
+                cmdLine.close()
+            elif event.key == pygame.K_RETURN:
+                cmdLine.processCmd()
+            elif event.key == pygame.K_BACKSPACE and len(cmdLine.text) > 1:
+                cmdLine.text = cmdLine.text[:-1]
+            elif event.key == pygame.K_h and len(cmdLine.text) > 1 and event.mod == 64:
+                cmdLine.text = cmdLine.text[:-1]
+            elif event.unicode in validChar:
+                cmdLine.text += event.unicode
 
     # update values
     while len(carList) > round(valuesDict["nb Car"]):
@@ -200,15 +201,16 @@ while isRunning:
         car.initState()
 
     # Game Loop
-
     display.fill((0, 0, 0))
     display.blit(backgroundImage, (0, 0))
-
     qTable.setActions()
 
     for car in carList:
         car.update()
         car.draw()
+
+    avgSpeed = setGetAvgSpeed(carList, debugDict)
+    avgSpeedList.append(avgSpeed)
 
     qTable.learn()
 
@@ -221,5 +223,11 @@ while isRunning:
 
     showDebugValues(display, debugDict)
 
+    cmdLine.draw()
+    cmdLine.gatherData()
+
     pygame.display.update()
     fpsClock.tick(FPS)
+    debugDict["nbIteration"] += 1
+
+sys.exit()

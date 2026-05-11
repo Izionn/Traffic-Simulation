@@ -20,6 +20,7 @@ class QTable:
         # dims -> range / interval:
         #   - self.speed -> [0, 130] / 10
         #   - next.speed -> [0, 130] / 10
+        #   - avg.speed -> [0, 130] / 10
         #   - self.dist -> [0, 1000] / 100
 
         # actions:
@@ -27,16 +28,18 @@ class QTable:
         #   - 1 : cruise
         #   - 2 : break
 
-        self.dimNb = 3
-        self.dimList = [14, 14, 11]
+        self.dimNb = 4
+        self.dimList = [14, 14, 14, 11]
         self.actionNb = 3
 
         self.stateSelfSpeedValues = np.arange(start=0, stop=131, step=10)
         self.stateNextSpeedValues = np.arange(start=0, stop=131, step=10)
+        self.stateAvgSpeedValues = np.arange(start=0, stop=131, step=10)
         self.stateDistValues = np.arange(start=2000, stop=3001, step=100)
 
         self.stateSelfSpeedInterval = 10
         self.stateNextSpeedInterval = 10
+        self.stateAvgSpeedInterval = 10
         self.stateDistInterval = 100
 
         self.qTable = np.zeros(self.dimList + [self.actionNb])
@@ -60,6 +63,7 @@ class QTable:
             if np.random.rand() > self.epsilon:
 
                 state = car.state
+
                 stateIndices = self.discretizeState(state)
 
                 currentQValues = self.qTable[*stateIndices]
@@ -83,12 +87,19 @@ class QTable:
             state = currentCar.state
 
             newStateSelfSpeed = currentCar.speed
-            newstateNextSpeed = nextCar.speed
-            newstateDist = abs(nextCar.angle - currentCar.angle) * self.roadRadius
+            newStateNextSpeed = nextCar.speed
+            newStateAvgSpeed = currentCar.avgSpeed
+            newStateDist = abs(nextCar.angle - currentCar.angle) * self.roadRadius
 
-            newState = np.array([newStateSelfSpeed, newstateNextSpeed, newstateDist])
+            newState = np.array(
+                [newStateSelfSpeed, newStateNextSpeed, newStateAvgSpeed, newStateDist]
+            )
 
-            reward = newStateSelfSpeed - abs(newStateSelfSpeed - newstateNextSpeed)
+            reward = (
+                newStateSelfSpeed
+                - abs(newStateSelfSpeed - newStateNextSpeed)
+                - abs(newStateSelfSpeed - newStateAvgSpeed)
+            )
 
             action = currentCar.action
 
@@ -99,9 +110,6 @@ class QTable:
         self.epsilon = max(self.epsilon * self.epsilonDecay, self.epsilonMin)
         self.debugDict["epsilon"] = round(self.epsilon, 2)
 
-        # print(self.qTable[:, :, 10])
-        # print()
-
     def updateQ(self, state, action, reward, newState):
         indexState = self.discretizeState(state)
         indexNewState = self.discretizeState(newState)
@@ -109,17 +117,17 @@ class QTable:
             1 - self.alpha
         ) + self.alpha * (reward + self.gamma * self.qTable[*indexNewState].max())
 
-        print(f"indexState : {indexState}, QValue : {self.qTable[*indexState]}")
-
     def discretizeState(self, state):
-        selfSpeed, nextSpeed, dist = state
+        selfSpeed, nextSpeed, avgSpeed, dist = state
 
         discreteSelfSpeed = closestValInArray(selfSpeed, self.stateSelfSpeedValues)
         discreteNextSpeed = closestValInArray(nextSpeed, self.stateNextSpeedValues)
+        discreteAvgSpeed = closestValInArray(avgSpeed, self.stateAvgSpeedValues)
         discreteDist = closestValInArray(dist, self.stateDistValues)
 
         indexSelfSpeed = discreteSelfSpeed // self.stateSelfSpeedInterval
         indexNextSpeed = discreteNextSpeed // self.stateNextSpeedInterval
+        indexAvgSpeed = discreteAvgSpeed // self.stateAvgSpeedInterval
         indexDist = (discreteDist - self.stateDistValues[0]) // self.stateDistInterval
 
-        return np.array([indexSelfSpeed, indexNextSpeed, indexDist])
+        return np.array([indexSelfSpeed, indexNextSpeed, indexAvgSpeed, indexDist])
