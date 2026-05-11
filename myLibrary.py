@@ -44,17 +44,17 @@ def showDebugValues(display, debugDict):
     display.blit(fontSurf, (0, 0))
 
 
-def setGetAvgSpeed(carList, debugDict):
-    newAvgSpeed = round(sum([car.speed for car in carList]) / len(carList))
+def getAvgSpeed(carList, debugDict):
+    minSpeed = min([car.speed for car in carList])
     for car in carList:
-        car.avgSpeed = newAvgSpeed
+        car.avgSpeed = minSpeed
 
+    newAvgSpeed = round(sum([car.speed for car in carList]) / len(carList))
     debugDict["avgSpeed"] = newAvgSpeed
-    return newAvgSpeed
 
 
-def computeJamitonsInt(carList: list):
-    intValue = 0
+def computeJamitonValue(carList: list):
+    jamitonValue = 0
     maxSpeed = carList[0].maxSpeed
     nbCar = len(carList)
     for carId in range(nbCar):
@@ -63,10 +63,7 @@ def computeJamitonsInt(carList: list):
         carAngle = carList[carId].angle
         nextCarAngle = carList[nextCarId].angle
 
-        if nextCarAngle - carAngle > 0:
-            deltaAngle = nextCarAngle - carAngle
-        else:
-            deltaAngle = 360 - carAngle + nextCarAngle
+        deltaAngle = (nextCarAngle - carAngle) % 360
 
         carSpeed = carList[carId].speed
         nextCarSpeed = carList[nextCarId].speed
@@ -74,11 +71,12 @@ def computeJamitonsInt(carList: list):
         deltaSpeed = nextCarSpeed - carSpeed
 
         currentArea = deltaAngle * (maxSpeed - carSpeed) - deltaAngle * deltaSpeed / 2
-        intValue += currentArea
+        localJamitonValue = currentArea / deltaAngle
+        jamitonValue += localJamitonValue
 
-    normalizedIntValue = intValue / (maxSpeed * 360)
+    normalizedIntValue = jamitonValue / (maxSpeed * 360)
 
     return normalizedIntValue
 
 
-validChar = "abcdefghijklmnopqrstuvwxyz 1234567890."
+validChar = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ 1234567890."

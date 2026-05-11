@@ -6,13 +6,16 @@ pygame.init()
 
 
 class Car:
-    def __init__(self, valuesDict, roadRadius, carId, carAngleList, carList) -> None:
+    def __init__(
+        self, valuesDict, roadRadius, carId, carAngleList, carList, debugDict
+    ) -> None:
         self.display = pygame.display.get_surface()
         assert type(self.display) == pygame.Surface
         self.displaySize = self.display.get_size()
         self.roadCenter = self.displaySize[1] // 2, self.displaySize[1] // 2
 
         self.valuesDict = valuesDict
+        self.debugDict = debugDict
 
         self.radius = 5
         self.redValue = 0
@@ -42,6 +45,7 @@ class Car:
 
         # perturbation logic
         self.perturbing = False
+        self.perturbingOnce = False
         self.perturbInterval = self.valuesDict["Perturb Interval"]
         self.perturbDuration = self.valuesDict["Perturb Duration"]
         self.perturbCooldown = self.perturbInterval
@@ -83,21 +87,25 @@ class Car:
         self.perturbInterval = self.valuesDict["Perturb Interval"]
         self.perturbDuration = self.valuesDict["Perturb Duration"]
 
+        if self.carId == 0:
+            self.perturbing = self.debugDict["perturbing"]
+
     def perturbTrafic(self):
         if self.stopped:
             self.perturbTimeLeft -= 1
             if self.perturbTimeLeft == 0:
                 self.stopped = False
                 self.perturbTimeLeft = self.perturbDuration
+
+                if self.perturbingOnce:
+                    self.perturbing = False
+                    self.perturbingOnce = False
+                    self.debugDict["perturbing"] = False
         else:
             self.perturbCooldown -= 1
             if self.perturbCooldown == 0:
                 self.stopped = True
                 self.perturbCooldown = self.perturbInterval
-
-        print(
-            f"self.stopped : {self.stopped}, self.perturbTimeLeft : {self.perturbTimeLeft}, self.perturbCooldown : {self.perturbCooldown}"
-        )
 
     def move(self):
 

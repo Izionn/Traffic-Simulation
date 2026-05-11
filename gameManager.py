@@ -50,8 +50,8 @@ valuesDict = {
     "Acceleration": 5,
     "Min Distance": 2000,
     "nb Car": 40,
-    "Perturb Interval": 100,
-    "Perturb Duration": 10,
+    "Perturb Interval": 900,
+    "Perturb Duration": 100,
 }
 
 extremaValuesDict = {
@@ -59,9 +59,16 @@ extremaValuesDict = {
     "Acceleration": (0, 100),
     "Min Distance": (500, 5000),
     "nb Car": (1, 200),
-    "Perturb Interval": (1, 500),
-    "Perturb Duration": (1, 100),
+    "Perturb Interval": (1, 2000),
+    "Perturb Duration": (1, 200),
 }
+
+# debug logic
+debugDict = {}
+debugDict["isRunning"] = True
+debugDict["thinking"] = True
+debugDict["perturbing"] = False
+debugDict["nbIteration"] = 0
 
 sliderList: list[Slider] = []
 for i in range(len(valuesDict.keys())):
@@ -71,7 +78,7 @@ carList: list[Car] = []
 
 carAngleList = [i * 360 / valuesDict["nb Car"] for i in range(valuesDict["nb Car"])]
 for i in range(valuesDict["nb Car"]):
-    carList.append((Car(valuesDict, roadRadius, i, carAngleList, carList)))
+    carList.append((Car(valuesDict, roadRadius, i, carAngleList, carList, debugDict)))
 
 for car in carList:
     car.updateValues()
@@ -87,13 +94,6 @@ for i in range(nbSlider):
     sliderList[i].selected = i == selectedSliderId
 
 
-# debug logic
-debugDict = {}
-debugDict["isRunning"] = True
-debugDict["thinking"] = True
-debugDict["perturbing"] = False
-debugDict["nbIteration"] = 0
-
 # PW logic
 
 # payneW = PayneW(carList, valuesDict)
@@ -105,11 +105,8 @@ debugDict["nbIteration"] = 0
 # qTable logic
 qTable = QTable(debugDict, carList, valuesDict, roadRadius)
 
-# plotting logic
-avgSpeedList = []
-
 # cmdLine logic
-cmdLine = CmdLine(qTable, avgSpeedList)
+cmdLine = CmdLine(qTable)
 
 while debugDict["isRunning"]:
     for event in pygame.event.get():
@@ -127,7 +124,16 @@ while debugDict["isRunning"]:
                 ]
                 for i in range(valuesDict["nb Car"]):
                     carList.append(
-                        (Car(valuesDict, roadRadius, i, carAngleList, carList))
+                        (
+                            Car(
+                                valuesDict,
+                                roadRadius,
+                                i,
+                                carAngleList,
+                                carList,
+                                debugDict,
+                            )
+                        )
                     )
             if event.key == pygame.K_t:
                 debugDict["thinking"] = not debugDict["thinking"]
@@ -192,7 +198,9 @@ while debugDict["isRunning"]:
 
         newSpeed = (carList[-1].speed + carList[0].speed) / 2
 
-        carList.append(Car(valuesDict, roadRadius, len(carList), carAngleList, carList))
+        carList.append(
+            Car(valuesDict, roadRadius, len(carList), carAngleList, carList, debugDict)
+        )
         carList[-1].speed = newSpeed
 
     for car in carList:
@@ -209,8 +217,7 @@ while debugDict["isRunning"]:
         car.update()
         car.draw()
 
-    avgSpeed = setGetAvgSpeed(carList, debugDict)
-    avgSpeedList.append(avgSpeed)
+    getAvgSpeed(carList, debugDict)
 
     qTable.learn()
 
@@ -227,7 +234,7 @@ while debugDict["isRunning"]:
     cmdLine.gatherData()
 
     pygame.display.update()
-    fpsClock.tick(FPS)
+    # fpsClock.tick(FPS)
     debugDict["nbIteration"] += 1
 
 sys.exit()

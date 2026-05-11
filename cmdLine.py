@@ -9,7 +9,10 @@ from matplotlib import pyplot as plt
 
 
 class CmdLine:
-    def __init__(self, qTable: QTable, avgSpeedList: list[float]) -> None:
+    def __init__(
+        self,
+        qTable: QTable,
+    ) -> None:
         self.display = pygame.display.get_surface()
         assert type(self.display) == pygame.Surface
         self.displaySize = self.display.get_size()
@@ -32,11 +35,10 @@ class CmdLine:
         self.qTable = qTable
         self.carList = self.qTable.carList
         self.debugDict = self.qTable.debugDict
-
-        self.avgSpeedList = avgSpeedList
+        self.valueDict = self.qTable.valueDict
 
         self.gathering = False
-        self.nbSample = 1000
+        self.nbSample = 5000
         self.jamitonSamples = np.zeros(self.nbSample)
         self.sampleId = 0
         self.plotPath = None
@@ -45,19 +47,13 @@ class CmdLine:
         command = self.text[1:]
         tokens = command.split(" ")
 
-        if tokens[0] == "echo":
-            print(" ".join(tokens[1:]))
-
-        elif tokens[0] == "qTable":
-            print(self.qTable.qTable)
-
-        elif tokens[0] == "save":
+        if tokens[0] == "save":
             self.saveCmd(tokens)
 
         elif tokens[0] == "load":
             self.loadCmd(tokens)
 
-        elif tokens[0] == "q":
+        elif tokens[0] == "q" or tokens[0] == "quit":
             self.debugDict["isRunning"]
             sys.exit()
 
@@ -67,10 +63,7 @@ class CmdLine:
         elif tokens[0] == "perturb":
             self.perturbCmd()
 
-        elif tokens[0] == "plot":
-            self.plotCmd()
-
-        elif tokens[0] == "gather":
+        elif tokens[0] == "gather" or tokens[0] == "g":
             self.startGatheringCmd(tokens)
 
         else:
@@ -99,38 +92,34 @@ class CmdLine:
 
     def saveCmd(self, tokens):
         if len(tokens) == 1:
-            with open("qTable0.json", "w") as saveFile:
-                qTableList = self.qTable.qTable.tolist()
-                json.dump(qTableList, saveFile)
-            print("Saved QTable to {qTable0.json}")
+            print("Expected a name for save command")
             return
 
-        fileName = tokens[1]
-        with open(f"qTable{fileName}.json", "w") as saveFile:
+        savePath = f"./data/qTable{tokens[1]}.json"
+        with open(savePath, "w") as saveFile:
             qTableList = self.qTable.qTable.tolist()
             json.dump(qTableList, saveFile)
-        print(f"Saved QTable to qTable{fileName}.json")
+        print(f"Saved QTable to {savePath}")
 
     def loadCmd(self, tokens):
+
         if len(tokens) == 1:
-            with open("qTable0.json", "r") as saveFile:
-                qTableList = json.load(saveFile)
-                self.qTable.qTable = np.array(qTableList)
-            print("Loaded QTable from qTable0.json")
+            print("Expected a name for load command")
             return
 
-        fileName = tokens[1]
-        with open(f"qTable{fileName}.json", "r") as saveFile:
+        savePath = f"./data/qTable{tokens[1]}.json"
+        with open(savePath, "r") as saveFile:
             qTableList = json.load(saveFile)
-            self.qTable.qTable = np.array(qTableList)
-        print(f"Loaded QTable from qTable{fileName}.json")
+            qTableArray = np.array(qTableList)
+            self.qTable.qTable = qTableArray
+        print(f"Loaded QTable from {savePath}")
 
     def setCmd(self, tokens):
         if len(tokens) < 3:
             print("Missing arguments for set command")
             return
 
-        if tokens[1] == "epsilon":
+        if tokens[1] == "epsilon" or tokens[1] == "eps":
             self.qTable.epsilon = float(tokens[2])
             return
 
@@ -139,32 +128,29 @@ class CmdLine:
         self.carList[0].perturbing = newState
         self.debugDict["perturbing"] = newState
 
-    def plotCmd(self):
-        yValues = np.array(self.avgSpeedList)
-        xValues = np.arange(len(self.avgSpeedList))
-
-        plt.plot(xValues, yValues)
-        print("Plotting avg speed")
-        plt.savefig("./example.pdf")
-
     def startGatheringCmd(self, tokens: list[str]):
-        """
-        set
-            "Perturb Interval": 950,
-            "Perturb Duration": 50,
-        create a numpy array of 10000
-        run the sim for 10000 iterations
-        """
+
         if len(tokens) > 2:
             print(f"Too many args were given ({len(tokens)}), expected (1)")
             return
         if len(tokens) == 1 and self.plotPath == None:
-            print("C'est quoi le nom zebi ?")
+            print("Expected a name for plot")
             return
 
+        self.valueDict["Perturb Duration"] = 100
+
         if not self.gathering:
-            self.plotPath = f"./{tokens[1]}.pdf"
+            self.plotPath = f"./data/{tokens[1]}.pdf"
             self.gathering = True
+
+            self.debugDict["perturbing"] = True
+
+            firstCar = self.carList[0]
+            firstCar.stopped = True
+            firstCar.perturbing = True
+            firstCar.perturbingOnce = True
+            firstCar.perturbTimeLeft = firstCar.perturbDuration
+
             print("Started gathering data")
 
         else:
@@ -179,8 +165,7 @@ class CmdLine:
         if not self.gathering:
             return
 
-        jamitonValue = computeJamitonsInt(self.carList)
-        print(f"jamitonValue : {jamitonValue}")
+        jamitonValue = computeJamitonValue(self.carList)
         self.jamitonSamples[self.sampleId] = jamitonValue
         self.sampleId += 1
 
@@ -201,3 +186,14 @@ class CmdLine:
             self.gathering = False
             self.plotPath = None
             self.sampleId = 0
+            self.jamitonSamples.fill(0)
+
+        elif self.sampleId % 100 == 0:
+            xPoints = np.arange(self.nbSample)
+
+            plt.xlabel("Iteration")
+            plt.ylabel("Jamiton Value")
+
+            plt.plot(xPoints, self.jamitonSamples)
+            plt.savefig(self.plotPath)
+            plt.cla()
